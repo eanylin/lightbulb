@@ -1,0 +1,23 @@
+---
+- name: Perform Checks to make sure this Playbook will complete successfully
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: make sure we are running correct Ansible Version
+      fail:
+        msg: "Ansible version must be at least => 2.6.0"
+      when: (ansible_version.major == 1) or
+            (ansible_version.major == 2 and ansible_version.minor < 6)
+
+- name: Create lab instances in Azure
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  vars:
+    teardown: false
+  roles:
+    - manage_azure_instances

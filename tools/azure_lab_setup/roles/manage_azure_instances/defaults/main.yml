@@ -1,0 +1,29 @@
+---
+# defaults file for manage_azure_instances
+azure_name_prefix: "Training"
+lightbulb_user: "ansible"
+lightbulb_user_password: "Supersecret123"
+vm_flavor: "Standard_DS1_v2"
+vm_image_offer: "RHEL"
+vm_image_publisher: "RedHat"
+vm_image_sku: "7.3"
+vm_resource_group: "ansible-lab"
+vm_security_group: "ansible-lab"
+vm_storage_account_type: "Standard_LRS"
+vm_subnet: "172.16.1.0/24"
+vm_subnet_name: "ansible-lab"
+vm_virtual_net: "172.16.0.0/16"
+vnet_name: "ansible-lab"
+
+lab_node_type:
+  - name: ansible
+    type: rhel7-tower
+
+  - name: node1
+    type: rhel7
+
+#  - name: node2
+#    type: rhel7
+
+#  - name: node3
+#    type: rhel7

@@ -1,0 +1,7 @@
+---
+# tasks file for manage_azure_instances
+- include_tasks: teardown.yml
+  when: teardown
+
+- include_tasks: provision.yml
+  when: not teardown

@@ -1,0 +1,13 @@
+[all:vars]
+{% if ssh_port is defined %}
+ansible_port={{ ssh_port }}
+{% endif %}
+
+{% for user in users %}
+[{{ user.username }}]
+{% for host in instances.results %}
+{% if user.username in host['invocation']['module_args']['name'] %}
+{{ host['invocation']['module_args']['name'] }} ansible_host={{ host['ansible_facts']['azure_vm']['properties']['networkProfile']['networkInterfaces'][0]['properties']['ipConfigurations'][0]['properties']['publicIPAddress']['properties']['ipAddress'] }} ansible_user={{ user.username }}
+{% endif %}
+{% endfor %}
+{% endfor %}
