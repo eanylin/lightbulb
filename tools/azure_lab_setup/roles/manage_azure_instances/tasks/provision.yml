@@ -1,0 +1,121 @@
+---
+- block:
+  - debug:
+      msg: "Creating network and security group"
+
+  - name: Create virtual network
+    azure_rm_virtualnetwork:
+      name: "{{ vnet_name }}"
+      resource_group: "{{ vm_resource_group }}"
+      address_prefixes_cidr: "{{ vm_virtual_net }}"
+      dns_servers:
+        - "8.8.8.8"
+        - "8.8.4.4"
+    tags:
+      - create_virtual_network
+
+  - name: Create subnet
+    azure_rm_subnet:
+      name: "{{ vm_subnet_name }}"
+      virtual_network_name: "{{ vnet_name }}"
+      resource_group: "{{ vm_resource_group }}"
+      address_prefix_cidr: "{{ vm_virtual_net }}"
+    tags:
+      - create_subnet
+
+  - name: Create security group
+    azure_rm_securitygroup:
+      name: "{{ vm_security_group }}"
+      resource_group: "{{ vm_resource_group }}"
+      rules:
+        - name: "AllowSSH"
+          protocol: "Tcp"
+          source_address_prefix: "*"
+          destination_port_range: 22
+          access: "Allow"
+          priority: 100
+          direction: "Inbound"
+        - name: "AllowHTTP"
+          protocol: "Tcp"
+          source_address_prefix: "*"
+          destination_port_range: 80
+          access: "Allow"
+          priority: 101
+          direction: "Inbound"
+        - name: "AllowHTTPS"
+          protocol: "Tcp"
+          source_address_prefix: "*"
+          destination_port_range: 443
+          access: "Allow"
+          priority: 102
+          direction: "Inbound"
+    tags:
+      - create_security_group
+
+- block:
+  - debug:
+      msg: "VM {{ item.0.username }}-{{ item.1.name }} will be created"  
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+
+  - name: Create storage account
+    azure_rm_storageaccount:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ item.0.username }}{{ item.1.name }}"
+      type: "{{ vm_storage_account_type }}"
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    tags:
+      - create_storage_account
+
+  - name: Create virtual network inteface card
+    azure_rm_networkinterface:
+      name: "{{ item.0.username }}-{{ item.1.name }}-nic"
+      resource_group: "{{ vm_resource_group }}"
+      virtual_network_name: "{{ vnet_name }}"
+      subnet_name: "{{ vm_subnet_name }}"
+      security_group: "{{ vm_security_group }}"
+      ip_configurations:
+        - name: "{{ item.0.username }}-{{ item.1.name }}-ipconfig"
+          public_ip_address_name: "{{ item.0.username }}-{{ item.1.name }}-publicip"
+          primary: True
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    tags:
+      - create_vnic
+
+  - name: Create virtual machine
+    azure_rm_virtualmachine:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ item.0.username }}-{{ item.1.name }}"
+      vm_size: "{{ vm_flavor }}" 
+      admin_username: "{{ item.0.username }}"
+      admin_password: "{{ lightbulb_user_password }}"
+      ssh_password_enabled: true
+      storage_account_name: "{{ item.0.username }}{{ item.1.name }}"
+      network_interfaces: "{{ item.0.username }}-{{ item.1.name }}-nic"
+      image:
+        offer: "{{ vm_image_offer }}"
+        publisher: "{{ vm_image_publisher }}"
+        sku: "{{ vm_image_sku }}"
+        version: latest
+      tags:
+        Name: "{{ azure_name_prefix }}-{{ item.0.username }}-{{ item.1.name }}"
+        Workshop: "{{ azure_name_prefix }}"
+        Username: "{{ lightbulb_user }}"
+        Info: "Username that provisioned this-> {{ lightbulb_user }}"
+        Linklight: "This was provisioned through the lightbulb provisioner"
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    register: instances
+    tags:
+      - provision_vm
+
+  - name: Include tasks only needed when creating instances
+    include_tasks: create.yml
+    tags:
+      - provision

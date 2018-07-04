@@ -1,0 +1,11 @@
+---
+- name: Destroy lab instances in Azure
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  vars:
+    teardown: true
+
+  roles:
+    - manage_azure_instances

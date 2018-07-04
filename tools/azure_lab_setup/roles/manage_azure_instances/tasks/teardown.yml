@@ -1,0 +1,85 @@
+---
+- block:
+  - debug:
+      msg: "VM {{ item.0.username }}-{{ item.1.name }} will be deleted"
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+
+  - name: Power Off
+    azure_rm_virtualmachine:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ item.0.username }}-{{ item.1.name }}"
+      started: no
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    tags:
+      - power_off_vm
+    ignore_errors: yes
+
+  - name: Deallocate
+    azure_rm_virtualmachine:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ item.0.username }}-{{ item.1.name }}"
+      allocated: no
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    tags:
+      - deallocate_vm_resource
+    ignore_errors: yes
+
+  - name: Delete vm and its associated resources
+    azure_rm_virtualmachine:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ item.0.username }}-{{ item.1.name }}"
+      state: absent
+      remove_on_absent:
+          - network_interfaces
+          - virtual_storage
+          - public_ips
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    tags:
+      - delete_vm
+    ignore_errors: yes
+
+  - name: Delete vm storage account
+    azure_rm_storageaccount:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ item.0.username }}{{ item.1.name }}"
+      state: absent
+    with_nested:
+      - "{{ users }}"
+      - "{{ lab_node_type }}"
+    tags:
+      - delete_storage_account
+    ignore_errors: yes
+
+- block:
+  - debug:
+      msg: "Delete security group and networks"
+
+  - name: Delete security group
+    azure_rm_securitygroup:
+      resource_group: "{{ vm_resource_group }}"
+      name: "{{ vm_security_group }}"
+      state: absent
+    ignore_errors: yes
+
+  - name: Delete subnet
+    azure_rm_subnet:
+      name: "{{ vm_subnet_name }}"
+      virtual_network_name: "{{ vnet_name }}"
+      resource_group: "{{ vm_resource_group }}"
+      state: absent
+    ignore_errors: yes
+
+  - name: Delete virtual network
+    azure_rm_virtualnetwork:
+      name: "{{ vnet_name }}"
+      resource_group: "{{ vm_resource_group }}"
+      state: absent
+    ignore_errors: yes

@@ -1,0 +1,24 @@
+[all:vars]
+ansible_user={{ item.username }}
+ansible_ssh_pass={{ lightbulb_user_password }}
+{% if ssh_port is defined %}
+ansible_port={{ ssh_port }}
+{% endif %}
+
+[web]
+{% for grouper, list in instances.results|groupby('item') if grouper[0] == item %}
+{% for vm in list %}
+{% if 'ansible' not in vm['invocation']['module_args']['name'] %}
+{{ vm['invocation']['module_args']['name'] }} ansible_host={{ vm['ansible_facts']['azure_vm']['properties']['networkProfile']['networkInterfaces'][0]['properties']['ipConfigurations'][0]['properties']['publicIPAddress']['properties']['ipAddress'] }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+[control]
+{% for grouper, list in instances.results|groupby('item') if grouper[0] == item %}
+{% for vm in list %}
+{% if 'ansible' in vm['invocation']['module_args']['name'] %}
+{{ vm['invocation']['module_args']['name'] }} ansible_host={{ vm['ansible_facts']['azure_vm']['properties']['networkProfile']['networkInterfaces'][0]['properties']['ipConfigurations'][0]['properties']['publicIPAddress']['properties']['ipAddress'] }}
+{% endif %}
+{% endfor %}
+{% endfor %}
